@@ -1,0 +1,12 @@
+[project]
+name = "alfio-lead-exporter"
+version = "0.1.0"
+description = "Python script for extracting data and generate more excels"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "polars>=1.31.0",
+    "pandas>=1.5.3",
+    "openpyxl>=3.1.5",
+    "pyarrow>=20.0.0",
+]
