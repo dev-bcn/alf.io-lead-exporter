@@ -4,7 +4,7 @@ A Python script that processes Excel lead sheets from events, extracts key colum
 
 ## Usage
 
-Run the script with [uv](https://github.com/astral-sh/uv):
+Run the script with [UV](https://github.com/astral-sh/uv):
 
 ```bash
 uv run main.py
