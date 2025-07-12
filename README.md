@@ -1,8 +1,10 @@
+![https://avatars.githubusercontent.com/u/34451076?s=200&v=4](https://avatars.githubusercontent.com/u/34451076?s=200&v=4)
+
 # Alf.io Lead Exporter
 
 [![Python build](https://github.com/dev-bcn/alf.io-lead-exporter/actions/workflows/python-package.yml/badge.svg)](https://github.com/dev-bcn/alf.io-lead-exporter/actions/workflows/python-package.yml)
 
-A Python script that processes Excel lead sheets from events, extracts key columns, groups by sponsor/booth, and generates individual Excel files for each sponsor.
+A Python script that processes Excel lead sheets from [Alfi.io leads](https://github.com/alfio-event), extracts key columns, groups by sponsor/booth, and generates individual Excel files for each sponsor.
 
 ## Usage
 
