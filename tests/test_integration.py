@@ -48,7 +48,7 @@ def test_main_function_with_args(self):
         self.output_dir_path
     ]
 
-    # 2. Use patch to temporarily replace sys.argv with our test arguments
+    # 2. Use `patch` to temporarily replace sys.argv with our test arguments
     with patch('sys.argv', test_args):
         main()
 

@@ -20,6 +20,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+
 class LeadLoader:
     """load Excel into a Polars DataFrame."""
 
@@ -81,13 +82,9 @@ def main():
     )
     parser.add_argument(
         "input_file",
+        nargs="?",
         default="sheets/devbcn-2025-sponsor-scan.xlsx",
         help="Path to the input Excel lead sheet (e.g., 'sheets/devbcn-2025-sponsor-scan.xlsx')."
-    )
-    parser.add_argument(
-        "-o", "--output-dir",
-        default="output",
-        help="Directory to save the output files (default: 'output')."
     )
     args = parser.parse_args()
     logging.info("Loading input file: %s", args.input_file)

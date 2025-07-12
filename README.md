@@ -8,12 +8,19 @@ A Python script that processes Excel lead sheets from events, extracts key colum
 
 Run the script with [UV](https://github.com/astral-sh/uv):
 
+### Install uv:
+
+```shell
+# On macOS and Linux.
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+### Run the app
 ```bash
 uv run main.py
 ```
 
 This will:
-1. Read the lead sheet from `sheets/devbcn-2025-sponsor-scan.xlsx`
+1. Read the lead sheet from `sheets/devbcn-2025-sponsor-scan.xlsx` (you can optionally pass another file path)
 2. Extract and process the data
 3. Generate one Excel file per sponsor in the `output` directory
 
