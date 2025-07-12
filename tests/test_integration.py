@@ -2,71 +2,83 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import pandas as pd
+import polars as pl
 
-from main import main
+from main import main, LeadTransformer
 
 
 class TestIntegration(unittest.TestCase):
     def setUp(self):
         self.original_output_dir = "output"
-        
+        self.test_dir = tempfile.mkdtemp()
         self.test_output_dir = tempfile.mkdtemp()
-        
-        if os.path.exists(self.original_output_dir):
-            self.original_output_dir_exists = True
-            self.original_output_dir_backup = tempfile.mkdtemp()
-            for item in os.listdir(self.original_output_dir):
-                src = os.path.join(self.original_output_dir, item)
-                dst = os.path.join(self.original_output_dir_backup, item)
-                if os.path.isdir(src):
-                    shutil.copytree(src, dst)
-                else:
-                    shutil.copy2(src, dst)
-            shutil.rmtree(self.original_output_dir)
-        else:
-            self.original_output_dir_exists = False
-        
-        os.makedirs(self.original_output_dir)
+        self.input_file_path = os.path.join(self.test_dir, "sample_leads.xlsx")
+        self.output_dir_path = os.path.join(self.test_dir, "test_output")
+
+        sample_data = {
+            'Full name': ['Alice', 'Bob', 'Charlie'],
+            'Job Title': ['Dev', 'Eng', 'PM'],
+            'Email': ['alice@a.com', 'bob@b.com', 'charlie@c.com'],
+            'tech stack': ['Python', 'Java', 'JS'],
+            'Years of Experience': [5, 10, 3],
+            'country': ['ES', 'FR', 'UK'],
+            'city': ['BCN', 'PAR', 'LON'],
+            'company': ['A', 'B', 'C'],
+            'Lead Status': ['New', 'Contacted', 'New'],
+            'Sponsor notes': ['', '', ''],
+            'Description': ['Sponsor One', 'Sponsor Two', 'Sponsor One']
+        }
+        df = pl.DataFrame(sample_data)
+        df.write_excel(self.input_file_path)
 
     def tearDown(self):
-        shutil.rmtree(self.test_output_dir)
-        
-        shutil.rmtree(self.original_output_dir)
-        if self.original_output_dir_exists:
-            os.makedirs(self.original_output_dir)
-            for item in os.listdir(self.original_output_dir_backup):
-                src = os.path.join(self.original_output_dir_backup, item)
-                dst = os.path.join(self.original_output_dir, item)
-                if os.path.isdir(src):
-                    shutil.copytree(src, dst)
-                else:
-                    shutil.copy2(src, dst)
-            shutil.rmtree(self.original_output_dir_backup)
+        """Remove the temporary directory and all its contents after the test."""
+        shutil.rmtree(self.test_dir)
 
-    def test_main_function(self):
-        """Test the end-to-end functionality of the main function."""
+def test_main_function_with_args(self):
+    """Test the end-to-end functionality by simulating command-line arguments."""
+    # 1. Define the arguments to simulate, including the script name
+    test_args = [
+        "main.py",  # The first element is always the script name
+        self.input_file_path,
+        "-o",
+        self.output_dir_path
+    ]
+
+    # 2. Use patch to temporarily replace sys.argv with our test arguments
+    with patch('sys.argv', test_args):
         main()
-        
-        self.assertTrue(os.path.exists(self.original_output_dir))
-        output_files = os.listdir(self.original_output_dir)
-        self.assertGreater(len(output_files), 0, "No output files were created")
-        
-        for filename in output_files:
-            if filename.endswith('.xlsx'):
-                file_path = os.path.join(self.original_output_dir, filename)
-                try:
-                    df = pd.read_excel(file_path)
-                    expected_columns = [
-                        'Full name', 'Job Title', 'Email', 'tech stack', 
-                        'Years of Experience', 'country', 'city', 'company', 
-                        'Lead Status', 'Sponsor notes'
-                    ]
-                    for col in expected_columns:
-                        self.assertIn(col, df.columns)
-                except Exception as e:
-                    self.fail(f"Failed to read Excel file {filename}: {e}")
+
+    # 3. Assertions now check the temporary output directory
+    self.assertTrue(os.path.exists(self.output_dir_path))
+    output_files = os.listdir(self.output_dir_path)
+    self.assertEqual(len(output_files), 2, "Expected two output files for two sponsors")
+
+    # Check for expected file names (based on our sample data)
+    expected_filenames = [
+        "Sponsor_One_devbcn-25-leads.xlsx",
+        "Sponsor_Two_devbcn-25-leads.xlsx"
+    ]
+    for fname in expected_filenames:
+        self.assertIn(fname, output_files, f"Expected file {fname} was not created")
+
+    # 4. Verify the content of one of the generated files
+    sponsor_one_file = os.path.join(self.output_dir_path, "Sponsor_One_devbcn-25-leads.xlsx")
+    try:
+        # Read with pandas for easy column checking, as in the original test
+        df = pd.read_excel(sponsor_one_file)
+        # The transformer should drop the 'Description' column
+        expected_columns = set(LeadTransformer.REQUIRED_COLS) - {'Description'}
+
+        self.assertEqual(set(df.columns), expected_columns)
+        self.assertEqual(len(df), 2, "Sponsor One file should contain 2 leads")
+        self.assertEqual(df.iloc[0]['Full name'], 'Alice')
+
+    except Exception as e:
+        self.fail(f"Failed to read or validate Excel file {sponsor_one_file}: {e}")
 
 if __name__ == '__main__':
     unittest.main()
