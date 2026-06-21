@@ -118,11 +118,17 @@ def main():
         default="sheets/devbcn-2025-sponsor-scan.xlsx",
         help="Path to the input Excel lead sheet (e.g., 'sheets/devbcn-2025-sponsor-scan.xlsx')."
     )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        default="output",
+        help="Directory where generated sponsor files will be written."
+    )
     args = parser.parse_args()
     logging.info("Loading input file: %s", args.input_file)
     loader = LeadLoader(args.input_file)
     transformer = LeadTransformer()
-    exporter = LeadExporter("output")
+    exporter = LeadExporter(args.output_dir)
 
     try:
         df_all = loader.load()
@@ -134,7 +140,7 @@ def main():
         raise SystemExit(1) from exc
 
     logging.info("Generated files:")
-    for filename in sorted(os.listdir("output")):
+    for filename in sorted(os.listdir(args.output_dir)):
         logging.info(f" - {filename}")
 
 
