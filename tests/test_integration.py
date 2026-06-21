@@ -20,7 +20,7 @@ class TestIntegration(unittest.TestCase):
 
         sample_data = {
             'Full name': ['Alice', 'Bob', 'Charlie'],
-            'Job Title': ['Dev', 'Eng', 'PM'],
+            'jobTitle': ['Dev', 'Eng', 'PM'],
             'Email': ['alice@a.com', 'bob@b.com', 'charlie@c.com'],
             'tech stack': ['Python', 'Java', 'JS'],
             'Years of Experience': [5, 10, 3],
@@ -31,54 +31,44 @@ class TestIntegration(unittest.TestCase):
             'Sponsor notes': ['', '', ''],
             'Description': ['Sponsor One', 'Sponsor Two', 'Sponsor One']
         }
-        df = pl.DataFrame(sample_data)
-        df.write_excel(self.input_file_path)
+        df = pd.DataFrame(sample_data)
+        df.to_excel(self.input_file_path, index=False)
 
     def tearDown(self):
         """Remove the temporary directory and all its contents after the test."""
         shutil.rmtree(self.test_dir)
 
-def test_main_function_with_args(self):
-    """Test the end-to-end functionality by simulating command-line arguments."""
-    # 1. Define the arguments to simulate, including the script name
-    test_args = [
-        "main.py",  # The first element is always the script name
-        self.input_file_path,
-        "-o",
-        self.output_dir_path
-    ]
+    def test_main_function_with_args(self):
+        """Test the end-to-end functionality by simulating command-line arguments."""
+        test_args = [
+            "main.py",
+            self.input_file_path,
+        ]
 
-    # 2. Use `patch` to temporarily replace sys.argv with our test arguments
-    with patch('sys.argv', test_args):
-        main()
+        with patch('sys.argv', test_args):
+            main()
 
-    # 3. Assertions now check the temporary output directory
-    self.assertTrue(os.path.exists(self.output_dir_path))
-    output_files = os.listdir(self.output_dir_path)
-    self.assertEqual(len(output_files), 2, "Expected two output files for two sponsors")
+        self.assertTrue(os.path.exists("output"))
+        output_files = os.listdir("output")
+        self.assertEqual(len(output_files), 2, "Expected two output files for two sponsors")
 
-    # Check for expected file names (based on our sample data)
-    expected_filenames = [
-        "Sponsor_One_devbcn-25-leads.xlsx",
-        "Sponsor_Two_devbcn-25-leads.xlsx"
-    ]
-    for fname in expected_filenames:
-        self.assertIn(fname, output_files, f"Expected file {fname} was not created")
+        expected_filenames = [
+            "Sponsor_One_devbcn-25-leads.xlsx",
+            "Sponsor_Two_devbcn-25-leads.xlsx"
+        ]
+        for fname in expected_filenames:
+            self.assertIn(fname, output_files, f"Expected file {fname} was not created")
 
-    # 4. Verify the content of one of the generated files
-    sponsor_one_file = os.path.join(self.output_dir_path, "Sponsor_One_devbcn-25-leads.xlsx")
-    try:
-        # Read with pandas for easy column checking, as in the original test
-        df = pd.read_excel(sponsor_one_file)
-        # The transformer should drop the 'Description' column
-        expected_columns = set(LeadTransformer.REQUIRED_COLS) - {'Description'}
+        sponsor_one_file = os.path.join("output", "Sponsor_One_devbcn-25-leads.xlsx")
+        try:
+            df = pd.read_excel(sponsor_one_file)
+            expected_columns = set(LeadTransformer.REQUIRED_COLS) - {'Description'}
 
-        self.assertEqual(set(df.columns), expected_columns)
-        self.assertEqual(len(df), 2, "Sponsor One file should contain 2 leads")
-        self.assertEqual(df.iloc[0]['Full name'], 'Alice')
-
-    except Exception as e:
-        self.fail(f"Failed to read or validate Excel file {sponsor_one_file}: {e}")
+            self.assertEqual(set(df.columns), expected_columns)
+            self.assertEqual(len(df), 2, "Sponsor One file should contain 2 leads")
+            self.assertEqual(df.iloc[0]['Full name'], 'Alice')
+        except Exception as e:
+            self.fail(f"Failed to read or validate Excel file {sponsor_one_file}: {e}")
 
 if __name__ == '__main__':
     unittest.main()

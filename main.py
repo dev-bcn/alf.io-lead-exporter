@@ -10,7 +10,7 @@ Reads an Excel lead sheet, extracts key columns, groups by 'description'
 import argparse
 import logging
 import os
-from typing import Dict
+from typing import Dict, Iterable
 
 import pandas as pd
 import polars as pl
@@ -28,7 +28,14 @@ class LeadLoader:
         self.path = path
 
     def load(self) -> pl.DataFrame:
-        pdf = pd.read_excel(self.path)
+        try:
+            pdf = pd.read_excel(self.path)
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(f"Input file not found: {self.path}") from exc
+        except ValueError as exc:
+            raise ValueError(f"Unable to read Excel file '{self.path}': {exc}") from exc
+        except Exception as exc:
+            raise RuntimeError(f"Failed to load Excel file '{self.path}': {exc}") from exc
         return pl.from_pandas(pdf)
 
 
@@ -48,9 +55,34 @@ class LeadTransformer:
         'Description'
     ]
 
+    COLUMN_ALIASES = {
+        'Job Title': ['Job Title', 'jobTitle', 'job title'],
+    }
+
+    @staticmethod
+    def _resolve_column(df_columns: Iterable[str], canonical_name: str) -> str:
+        aliases = LeadTransformer.COLUMN_ALIASES.get(canonical_name, [canonical_name])
+        for candidate in aliases:
+            if candidate in df_columns:
+                return candidate
+        available = ', '.join(sorted(df_columns))
+        expected = ', '.join(aliases)
+        raise ValueError(
+            f"Missing required column '{canonical_name}'. "
+            f"Expected one of: {expected}. "
+            f"Available columns: {available or 'none'}."
+        )
+
     @staticmethod
     def extract(df: pl.DataFrame) -> pl.DataFrame:
-        return df.select(LeadTransformer.REQUIRED_COLS)
+        rename_map = {}
+        for canonical in LeadTransformer.REQUIRED_COLS:
+            resolved = LeadTransformer._resolve_column(df.columns, canonical)
+            if resolved != canonical:
+                rename_map[resolved] = canonical
+
+        normalized = df.rename(rename_map) if rename_map else df
+        return normalized.select(LeadTransformer.REQUIRED_COLS)
 
     @staticmethod
     def group(df: pl.DataFrame) -> Dict[str, pl.DataFrame]:
@@ -92,10 +124,14 @@ def main():
     transformer = LeadTransformer()
     exporter = LeadExporter("output")
 
-    df_all = loader.load()
-    df_clean = transformer.extract(df_all)
-    grouped = transformer.group(df_clean)
-    exporter.export(grouped)
+    try:
+        df_all = loader.load()
+        df_clean = transformer.extract(df_all)
+        grouped = transformer.group(df_clean)
+        exporter.export(grouped)
+    except Exception as exc:
+        logging.error(str(exc))
+        raise SystemExit(1) from exc
 
     logging.info("Generated files:")
     for filename in sorted(os.listdir("output")):
@@ -105,7 +141,7 @@ def main():
 def _test_grouping_logic():
     sample = pl.DataFrame({
         'Full name': ['A', 'B', 'C'],
-        'Job Title': ['X', 'Y', 'Z'],
+        'jobTitle': ['X', 'Y', 'Z'],
         'tech stack': ['1', '2', '3'],
         'years of experience': [1, 2, 3],
         'country': ['ES', 'US', 'FR'],
@@ -115,7 +151,7 @@ def _test_grouping_logic():
         'Sponsor notes': ['a', 'b', 'c'],
         'Description': ['One', 'Two', 'One']
     })
-    grouped = LeadTransformer.group(sample)
+    grouped = LeadTransformer.group(LeadTransformer.extract(sample))
     assert set(grouped.keys()) == {'One', 'Two'}
     assert grouped['One'].shape == (2, 9)
     assert grouped['Two'].shape == (1, 9)
@@ -124,4 +160,3 @@ def _test_grouping_logic():
 
 if __name__ == "__main__":
     main()
-    _test_grouping_logic()

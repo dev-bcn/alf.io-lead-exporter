@@ -21,6 +21,7 @@ class TestLeadTransformer(unittest.TestCase):
             'Description': ['One', 'Two', 'One'],
             'Extra Column': ['extra1', 'extra2', 'extra3']  # Column that should be filtered out
         })
+        self.sample_data_alt_header = self.sample_data.rename({'Job Title': 'jobTitle'})
 
     def test_extract(self):
         """Test that the extract method correctly selects only the required columns."""
@@ -35,6 +36,22 @@ class TestLeadTransformer(unittest.TestCase):
         self.assertNotIn('Extra Column', result.columns)
         
         self.assertEqual(result.shape[0], 3)
+
+    def test_extract_accepts_job_title_alias(self):
+        """Test that the extract method accepts the jobTitle header variant."""
+        result = LeadTransformer.extract(self.sample_data_alt_header)
+        self.assertIn('Job Title', result.columns)
+        self.assertNotIn('jobTitle', result.columns)
+        self.assertEqual(result['Job Title'].to_list(), ['X', 'Y', 'Z'])
+
+    def test_extract_missing_job_title_raises_helpful_error(self):
+        """Test that missing job title columns produce a readable error."""
+        df = self.sample_data.drop('Job Title')
+        with self.assertRaises(ValueError) as ctx:
+            LeadTransformer.extract(df)
+
+        self.assertIn("Missing required column 'Job Title'", str(ctx.exception))
+        self.assertIn("jobTitle", str(ctx.exception))
 
     def test_group(self):
         """Test that group method correctly groups data by Description."""
