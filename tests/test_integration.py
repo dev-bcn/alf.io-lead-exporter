@@ -43,13 +43,15 @@ class TestIntegration(unittest.TestCase):
         test_args = [
             "main.py",
             self.input_file_path,
+            "--output-dir",
+            self.output_dir_path,
         ]
 
         with patch('sys.argv', test_args):
             main()
 
-        self.assertTrue(os.path.exists("output"))
-        output_files = os.listdir("output")
+        self.assertTrue(os.path.exists(self.output_dir_path))
+        output_files = os.listdir(self.output_dir_path)
         self.assertEqual(len(output_files), 2, "Expected two output files for two sponsors")
 
         expected_filenames = [
@@ -59,7 +61,7 @@ class TestIntegration(unittest.TestCase):
         for fname in expected_filenames:
             self.assertIn(fname, output_files, f"Expected file {fname} was not created")
 
-        sponsor_one_file = os.path.join("output", "Sponsor_One_devbcn-25-leads.xlsx")
+        sponsor_one_file = os.path.join(self.output_dir_path, "Sponsor_One_devbcn-25-leads.xlsx")
         try:
             df = pd.read_excel(sponsor_one_file)
             expected_columns = set(LeadTransformer.REQUIRED_COLS) - {'Description'}
